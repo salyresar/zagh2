@@ -11,7 +11,7 @@ from telegram.constants import ParseMode
 # --- الإعدادات الأساسية ---
 TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = 7271805464 
-CHANNEL_ID = "@eliteseceret"  # استبدله بمعرف قناتك (تأكد أن البوت مشرف فيها)
+CHANNELS = ["@eliteseceret", "@worddecor"]  # ضع معرفات قنواتك هنا # استبدله بمعرف قناتك (تأكد أن البوت مشرف فيها)
 SHEET_ID = "1RTCF6wWNrmtIWkLXYUPgVvB3HU12W8vfMLh0bxMtETg"
 
 logging.basicConfig(level=logging.INFO)
@@ -37,13 +37,15 @@ def add_user(user_id):
     except: pass
 
 async def check_sub(user_id, context):
-    try:
-        member = await context.bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        if member.status in ['left', 'kicked']: return False
-        return True
-    except Exception as e:
-        logging.error(f"Sub Check Error: {e}")
-        return True # لتجنب توقف البوت في حال فشل الاتصال
+    for channel in CHANNELS:
+        try:
+            member = await context.bot.get_chat_member(chat_id=channel, user_id=user_id)
+            if member.status in ['left', 'kicked']:
+                return False, channel  # يعيد False ومعرف القناة التي لم يشترك فيها
+        except Exception as e:
+            logging.error(f"Error checking {channel}: {e}")
+            continue # إذا كان هناك خطأ في قناة واحدة، ننتقل للتالية
+    return True, None # مشترك في الجميعلتجنب توقف البوت في حال فشل الاتصال
 
 # --- محرك الزخرفة المطور (12 نمط) ---
 def get_all_styles(text):
@@ -166,3 +168,4 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
     app.run_polling()
+
