@@ -8,10 +8,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from telegram.constants import ParseMode
 
-# --- الإعدادات ---
+# --- الإعدادات الأساسية ---
 TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = 7271805464 
-CHANNEL_ID = "@eliteseceret" # استبدله بمعرف قناتك
+CHANNEL_ID = "@eliteseceret"  # استبدله بمعرف قناتك (تأكد أن البوت مشرف فيها)
 SHEET_ID = "1RTCF6wWNrmtIWkLXYUPgVvB3HU12W8vfMLh0bxMtETg"
 
 logging.basicConfig(level=logging.INFO)
@@ -25,115 +25,144 @@ db = gc.open_by_key(SHEET_ID)
 users_sheet = db.worksheet("users") 
 ban_sheet = db.worksheet("ban")
 
-# --- وظائف الحماية والبيانات ---
+# --- وظائف التحقق ---
 def is_banned(user_id):
-    return ban_sheet.find(str(user_id)) is not None
+    try: return ban_sheet.find(str(user_id)) is not None
+    except: return False
 
 def add_user(user_id):
-    if not users_sheet.find(str(user_id)):
-        users_sheet.append_row([str(user_id)])
+    try:
+        if not users_sheet.find(str(user_id)):
+            users_sheet.append_row([str(user_id)])
+    except: pass
 
 async def check_sub(user_id, context):
     try:
         member = await context.bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        return member.status not in ['left', 'kicked']
-    except: return True 
+        if member.status in ['left', 'kicked']: return False
+        return True
+    except Exception as e:
+        logging.error(f"Sub Check Error: {e}")
+        return True # لتجنب توقف البوت في حال فشل الاتصال
 
-# --- سيرفر التشغيل الدائم ---
+# --- محرك الزخرفة المطور (12 نمط) ---
+def get_all_styles(text):
+    text_clean = araby.strip_tashkeel(text)
+    tash = ['َ', 'ُ', 'ِ', 'ْ', 'ّ', 'ً', 'ٌ', 'ٍ']
+    def d(t, p=0.4): return "".join([c + random.choice(tash) if c != ' ' and random.random() < p else c for c in t])
+    
+    return {
+        's1': f"۞ {d(text_clean, 0.3)} ۞",
+        's2': f"﴿ {text_clean} ﴾",
+        's3': f"★彡 {text_clean} 彡★",
+        's4': f"{text_clean.replace('', 'ـ')[1:-1]}",
+        's5': f"✨ {d(text_clean, 0.6)} ✨",
+        's6': f"👑 {text_clean} 👑",
+        's7': f"⟦ {text_clean} ⟧",
+        's8': f"『 {text_clean} 』",
+        's9': f"╰ {text_clean} ╮", # جديد
+        's10': f"⚡️ {d(text_clean, 0.8)} ⚡️", # جديد
+        's11': f"【{text_clean}】", # جديد
+        's12': f"💎 ⁞ {text_clean} ⁞ 💎" # جديد
+    }
+
+# --- لوحة التحكم ---
+def admin_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 الأعضاء", callback_data='adm_count'), InlineKeyboardButton("📢 إذاعة", callback_data='adm_bc')],
+        [InlineKeyboardButton("🚫 حظر", callback_data='adm_ban'), InlineKeyboardButton("🔓 فك حظر", callback_data='adm_unban')],
+        [InlineKeyboardButton("❌ إغلاق", callback_data='adm_close')]
+    ])
+
+# --- سيرفر Flask ---
 flask_app = Flask('')
 @flask_app.route('/')
 def home(): return "Bot Online"
 def keep_alive(): Thread(target=lambda: flask_app.run(host='0.0.0.0', port=8080)).start()
 
-# --- لوحة التحكم (الأزرار) ---
-def admin_kb():
-    keyboard = [
-        [InlineKeyboardButton("📊 عدد الأعضاء", callback_data='st_count'), InlineKeyboardButton("📢 إذاعة للكل", callback_data='st_bc')],
-        [InlineKeyboardButton("🚫 حظر مستخدم", callback_data='st_ban'), InlineKeyboardButton("🔓 فك حظر", callback_data='st_unban')],
-        [InlineKeyboardButton("❌ إغلاق اللوحة", callback_data='st_close')]
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-# --- محرك الزخرفة ---
-def get_styles(text):
-    tash = ['َ', 'ُ', 'ِ', 'ْ', 'ّ', 'ً', 'ٌ', 'ٍ']
-    def dec(t, d=0.5): return "".join([c + random.choice(tash) if c != ' ' and random.random() < d else c for c in t])
-    return {
-        's1': f"۞ {dec(text, 0.4)} ۞", 's2': dec(text, 0.9), 's3': f"﴿ {text} ﴾",
-        's4': f"★彡 {text} 彡★", 's5': f"{text.replace('', 'ـ')[1:-1]}", 
-        's6': f"✨ {dec(text, 0.7)} ✨", 's7': f"👑 ⚜️ {text} ⚜️ 👑", 's8': f"⟦ {text} ⟧"
-    }
-
-# --- المعالجات ---
+# --- المعالجات الرئيسية ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if is_banned(uid): return
     add_user(uid)
-    if not await check_sub(uid, context):
-        return await update.message.reply_text(f"⚠️ يجب الاشتراك بالقناة أولاً:\n{CHANNEL_ID}", 
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("إضغط هنا للاشتراك", url=f"https://t.me/{CHANNEL_ID[1:]}")]]))
-    await update.message.reply_text("<b>أهلاً بك في بوت زخرفة حبر الأمة 🖋️</b>\nأرسل النص الآن.", parse_mode=ParseMode.HTML)
-
-async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id == ADMIN_ID:
-        await update.message.reply_text("🛠 **لوحة تحكم المدير:**", reply_markup=admin_kb())
-
-async def query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    uid = update.effective_user.id
-    await q.answer()
-
-    if q.data.startswith('st_'): # أوامر الأدمن
-        if uid != ADMIN_ID: return
-        if q.data == 'st_count':
-            count = len(users_sheet.col_values(1))
-            await q.edit_message_text(f"📊 إجمالي عدد المشتركين: {count}", reply_markup=admin_kb())
-        elif q.data == 'st_bc':
-            await q.edit_message_text("📝 أرسل رسالة الإذاعة الآن:")
-            context.user_data['state'] = 'bc'
-        elif q.data == 'st_ban':
-            await q.edit_message_text("🆔 أرسل الـ ID المراد حظره:")
-            context.user_data['state'] = 'ban'
-        elif q.data == 'st_close':
-            await q.delete_message()
     
-    elif q.data.startswith('s'): # أوامر الزخرفة
-        styles = get_styles(context.user_data.get('txt', "حبر الأمة"))
-        await q.edit_message_text(f"<code>{styles.get(q.data)}</code>", parse_mode=ParseMode.HTML)
+    if not await check_sub(uid, context):
+        return await update.message.reply_text(f"⚠️ عذراً، يجب أن تشترك في القناة أولاً:\n{CHANNEL_ID}", 
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("إضغط هنا للاشتراك ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")]]))
+    
+    await update.message.reply_text("🖋 **أهلاً بك في حبر الأمة للزخرفة.**\nأرسل النص الآن لزخرفته بـ 12 نمطاً مختلفاً.")
 
-async def msg_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    uid = update.effective_user.id
+    await query.answer()
+
+    if query.data.startswith('adm_'):
+        if uid != ADMIN_ID: return
+        if query.data == 'adm_count':
+            await query.edit_message_text(f"📊 المشتركين: {len(users_sheet.col_values(1))}", reply_markup=admin_kb())
+        elif query.data == 'adm_bc':
+            await query.edit_message_text("📝 أرسل الإذاعة الآن:")
+            context.user_data['step'] = 'bc'
+        elif query.data == 'adm_ban':
+            await query.edit_message_text("🆔 أرسل الـ ID للحظر:")
+            context.user_data['step'] = 'ban'
+        elif query.data == 'adm_unban':
+            await query.edit_message_text("🔓 أرسل الـ ID لفك الحظر:")
+            context.user_data['step'] = 'unban'
+        elif query.data == 'adm_close': await query.delete_message()
+    
+    elif query.data.startswith('s'):
+        txt = context.user_data.get('last_txt', "حبر الأمة")
+        styles = get_all_styles(txt)
+        await query.edit_message_text(f"✅ النتيجة:\n\n<code>{styles.get(query.data)}</code>", parse_mode=ParseMode.HTML)
+
+async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if is_banned(uid): return
     
-    state = context.user_data.get('state')
-    if uid == ADMIN_ID and state:
-        if state == 'bc':
+    # تنفيذ مهام الأدمن (إذاعة / حظر)
+    step = context.user_data.get('step')
+    if uid == ADMIN_ID and step:
+        if step == 'bc':
             for u in users_sheet.col_values(1):
                 try: await context.bot.send_message(u, update.message.text)
                 except: pass
             await update.message.reply_text("✅ تمت الإذاعة.")
-        elif state == 'ban':
-            ban_sheet.append_row([update.message.text])
-            await update.message.reply_text("🚫 تم الحظر.")
-        context.user_data['state'] = None
+        elif step == 'ban':
+            target = update.message.text
+            if not ban_sheet.find(target): ban_sheet.append_row([target])
+            await update.message.reply_text(f"🚫 تم حظر {target}")
+        elif step == 'unban':
+            target = update.message.text
+            try:
+                cell = ban_sheet.find(target)
+                ban_sheet.delete_rows(cell.row)
+                await update.message.reply_text(f"🔓 تم فك حظر {target}")
+            except: await update.message.reply_text("⚠️ هذا المستخدم غير محظور أصلاً.")
+        context.user_data['step'] = None
         return
 
-    # عرض أزرار الزخرفة
-    context.user_data['txt'] = araby.strip_tashkeel(update.message.text)
+    # عرض أزرار الزخرفة للمستخدم
+    if not await check_sub(uid, context):
+        return await update.message.reply_text(f"⚠️ اشترك أولاً: {CHANNEL_ID}")
+
+    context.user_data['last_txt'] = update.message.text
     kb = [
-        [InlineKeyboardButton("زخرفة إسلامية", callback_data='s1'), InlineKeyboardButton("تشكيل", callback_data='s2')],
-        [InlineKeyboardButton("مصحف", callback_data='s3'), InlineKeyboardButton("نجوم", callback_data='s4')],
-        [InlineKeyboardButton("كشيدة", callback_data='s5'), InlineKeyboardButton("فخمة", callback_data='s6')]
+        [InlineKeyboardButton("۞ إسلامية", callback_data='s1'), InlineKeyboardButton("﴿ قرآنية ﴾", callback_data='s2')],
+        [InlineKeyboardButton("★ نجوم", callback_data='s3'), InlineKeyboardButton("ـ كشيدة ـ", callback_data='s4')],
+        [InlineKeyboardButton("✨ بريق", callback_data='s5'), InlineKeyboardButton("👑 ملكي", callback_data='s6')],
+        [InlineKeyboardButton("⟦ أقواس ⟧", callback_data='s7'), InlineKeyboardButton("『 فخامة 』", callback_data='s8')],
+        [InlineKeyboardButton("╰ مائل ╮", callback_data='s9'), InlineKeyboardButton("⚡️ رعد", callback_data='s10')],
+        [InlineKeyboardButton("【 عريض 】", callback_data='s11'), InlineKeyboardButton("💎 جوهرة", callback_data='s12')]
     ]
-    await update.message.reply_text("اختر النمط:", reply_markup=InlineKeyboardMarkup(kb))
+    await update.message.reply_text("⚙️ **اختر نمط الزخرفة:**", reply_markup=InlineKeyboardMarkup(kb))
 
 if __name__ == '__main__':
     keep_alive()
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('admin', admin_cmd))
-    app.add_handler(CallbackQueryHandler(query_handler))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), msg_handler))
-
+    app.add_handler(CommandHandler('admin', lambda u, c: u.message.reply_text("🛠 لوحة التحكم:", reply_markup=admin_kb()) if u.effective_user.id == ADMIN_ID else None))
+    app.add_handler(CallbackQueryHandler(handle_callback))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
     app.run_polling()
-
