@@ -11,7 +11,7 @@ from telegram.constants import ParseMode
 # --- الإعدادات ---
 TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = 7271805464 
-CHANNEL_ID = "@worddecor" # استبدله بمعرف قناتك
+CHANNEL_ID = "@eliteseceret" # استبدله بمعرف قناتك
 SHEET_ID = "1RTCF6wWNrmtIWkLXYUPgVvB3HU12W8vfMLh0bxMtETg"
 
 logging.basicConfig(level=logging.INFO)
@@ -136,3 +136,4 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), msg_handler))
 
     app.run_polling()
+
