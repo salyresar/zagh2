@@ -65,7 +65,9 @@ def get_all_styles(text):
         's9': f"╰ {text_clean} ╮", # جديد
         's10': f"⚡️ {d(text_clean, 0.8)} ⚡️", # جديد
         's11': f"【{text_clean}】", # جديد
-        's12': f"💎 ⁞ {text_clean} ⁞ 💎" # جديد
+        's12': f"💎 ⁞ {text_clean} ⁞ 💎" #جديد
+        's13': "dec(text, 0.9)" 
+        
     }
 
 # --- لوحة التحكم ---
@@ -156,7 +158,8 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("✨ بريق", callback_data='s5'), InlineKeyboardButton("👑 ملكي", callback_data='s6')],
         [InlineKeyboardButton("⟦ أقواس ⟧", callback_data='s7'), InlineKeyboardButton("『 فخامة 』", callback_data='s8')],
         [InlineKeyboardButton("╰ مائل ╮", callback_data='s9'), InlineKeyboardButton("⚡️ رعد", callback_data='s10')],
-        [InlineKeyboardButton("【 عريض 】", callback_data='s11'), InlineKeyboardButton("💎 جوهرة", callback_data='s12')]
+        [InlineKeyboardButton("【 عريض 】", callback_data='s11'), InlineKeyboardButton("💎 جوهرة", callback_data='s12')],
+        InlineKeyboardButton("تشكيل", callback_data='s13')]
     ]
     await update.message.reply_text("⚙️ **اختر نمط الزخرفة:**", reply_markup=InlineKeyboardMarkup(kb))
 
@@ -168,4 +171,5 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
     app.run_polling()
+
 
