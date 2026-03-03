@@ -47,7 +47,7 @@ async def check_sub(user_id, context):
             continue # إذا كان هناك خطأ في قناة واحدة، ننتقل للتالية
     return True, None # مشترك في الجميعلتجنب توقف البوت في حال فشل الاتصال
 
-# --- محرك الزخرفة المطور (12 نمط) ---
+# --- محرك الزخرفة المطور (13 نمط) ---
 def get_all_styles(text):
     text_clean = araby.strip_tashkeel(text)
     tash = ['َ', 'ُ', 'ِ', 'ْ', 'ّ', 'ً', 'ٌ', 'ٍ']
@@ -94,7 +94,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text(f"⚠️ عذراً، يجب أن تشترك في القناة أولاً:\n{CHANNEL_ID}", 
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("إضغط هنا للاشتراك ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")]]))
     
-    await update.message.reply_text("🖋 **أهلاً بك في حبر الأمة للزخرفة.**\nأرسل النص الآن لزخرفته بـ 12 نمطاً مختلفاً.")
+    await update.message.reply_text("🖋 **أهلاً بك في حبر الأمة للزخرفة.**\nأرسل النص الآن لزخرفته بـ 13 نمطاً مختلفاً.")
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -159,7 +159,7 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⟦ أقواس ⟧", callback_data='s7'), InlineKeyboardButton("『 فخامة 』", callback_data='s8')],
         [InlineKeyboardButton("╰ مائل ╮", callback_data='s9'), InlineKeyboardButton("⚡️ رعد", callback_data='s10')],
         [InlineKeyboardButton("【 عريض 】", callback_data='s11'), InlineKeyboardButton("💎 جوهرة", callback_data='s12')],
-        InlineKeyboardButton("تشكيل", callback_data='s13')]
+        [InlineKeyboardButton("تشكيل", callback_data='s13')]
     ]
     await update.message.reply_text("⚙️ **اختر نمط الزخرفة:**", reply_markup=InlineKeyboardMarkup(kb))
 
@@ -171,5 +171,6 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
     app.run_polling()
+
 
 
