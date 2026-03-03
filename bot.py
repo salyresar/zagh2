@@ -34,7 +34,7 @@ def add_user(user_id):
     try:
         if not users_sheet.find(str(user_id)):
             users_sheet.append_row([str(user_id)])
-            return True # مستخدم جديد فعلاً
+            return True 
     except: pass
     return False
 
@@ -49,32 +49,26 @@ async def check_sub(user_id, context):
             continue
     return True, None
 
-# --- محرك الزخرفة المطور (13 نمط) ---
+# --- محرك الزخرفة (13 نمط) ---
 def get_all_styles(text):
     text_clean = araby.strip_tashkeel(text)
     tash = ['َ', 'ُ', 'ِ', 'ْ', 'ّ', 'ً', 'ٌ', 'ٍ']
     def d(t, p=0.4): return "".join([c + random.choice(tash) if c != ' ' and random.random() < p else c for c in t])
-    
     return {
-        's1': f"۞ {d(text_clean, 0.3)} ۞",
-        's2': f"﴿ {text_clean} ﴾",
-        's3': f"★彡 {text_clean} 彡★",
-        's4': f"{text_clean.replace('', 'ـ')[1:-1]}",
-        's5': f"✨ {d(text_clean, 0.6)} ✨",
-        's6': f"👑 {text_clean} 👑",
-        's7': f"⟦ {text_clean} ⟧",
-        's8': f"『 {text_clean} 』",
-        's9': f"╰ {text_clean} ╮",
-        's10': f"⚡️ {d(text_clean, 0.8)} ⚡️",
-        's11': f"【{text_clean}】",
-        's12': f"💎 ⁞ {text_clean} ⁞ 💎",
+        's1': f"۞ {d(text_clean, 0.3)} ۞", 's2': f"﴿ {text_clean} ﴾",
+        's3': f"★彡 {text_clean} 彡★", 's4': f"{text_clean.replace('', 'ـ')[1:-1]}",
+        's5': f"✨ {d(text_clean, 0.6)} ✨", 's6': f"👑 {text_clean} 👑",
+        's7': f"⟦ {text_clean} ⟧", 's8': f"『 {text_clean} 』",
+        's9': f"╰ {text_clean} ╮", 's10': f"⚡️ {d(text_clean, 0.8)} ⚡️",
+        's11': f"【{text_clean}】", 's12': f"💎 ⁞ {text_clean} ⁞ 💎",
         's13': f"{d(text_clean, 0.9)}"
     }
 
-# --- لوحة التحكم ---
+# --- لوحة التحكم المطورة ---
 def admin_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 الأعضاء", callback_data='adm_count'), InlineKeyboardButton("📢 إذاعة", callback_data='adm_bc')],
+        [InlineKeyboardButton("📊 إحصائيات", callback_data='adm_stats'), InlineKeyboardButton("📢 إذاعة", callback_data='adm_bc')],
+        [InlineKeyboardButton("📋 قائمة IDs", callback_data='adm_list'), InlineKeyboardButton("🔍 فحص عضو", callback_data='adm_check')],
         [InlineKeyboardButton("🚫 حظر", callback_data='adm_ban'), InlineKeyboardButton("🔓 فك حظر", callback_data='adm_unban')],
         [InlineKeyboardButton("❌ إغلاق", callback_data='adm_close')]
     ])
@@ -85,29 +79,19 @@ flask_app = Flask('')
 def home(): return "Bot Online"
 def keep_alive(): Thread(target=lambda: flask_app.run(host='0.0.0.0', port=8080)).start()
 
-# --- المعالجات الرئيسية ---
+# --- المعالجات ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     uid = user.id
     if is_banned(uid): return
-    
-    # محاولة إضافة المستخدم وإشعار الأدمن إذا كان جديداً
     if add_user(uid):
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"🆕 **مشترك جديد انضم للبوت:**\n\n👤 الاسم: {user.full_name}\n🆔 المعرف: <code>{uid}</code>\n🔗 اليوزر: @{user.username}",
-            parse_mode=ParseMode.HTML
-        )
+        await context.bot.send_message(chat_id=ADMIN_ID, text=f"🆕 **انضمام عضو جديد:**\n\n👤: {user.full_name}\n🆔: <code>{uid}</code>\n🔗: @{user.username}", parse_mode=ParseMode.HTML)
     
     is_sub, channel = await check_sub(uid, context)
     if not is_sub:
-        kb = [[InlineKeyboardButton("إضغط هنا للاشتراك ✅", url=f"https://t.me/{channel[1:]}")]]
-        return await update.message.reply_text(
-            f"⚠️ عذراً، يجب أن تشترك في القناة {channel} أولاً لتتمكن من استخدام البوت.",
-            reply_markup=InlineKeyboardMarkup(kb)
-        )
-    
-    await update.message.reply_text("🖋 **أهلاً بك في حبر الأمة للزخرفة.**\nأرسل النص الآن لزخرفته بـ 13 نمطاً مختلفاً.")
+        kb = [[InlineKeyboardButton("اشتراك ✅", url=f"https://t.me/{channel[1:]}")]]
+        return await update.message.reply_text(f"⚠️ يجب الاشتراك في {channel} أولاً.", reply_markup=InlineKeyboardMarkup(kb))
+    await update.message.reply_text("🖋 **مرحباً بك في حبر الأمة.**\nأرسل النص الآن للزخرفة.")
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -116,17 +100,38 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data.startswith('adm_'):
         if uid != ADMIN_ID: return
-        if query.data == 'adm_count':
-            await query.edit_message_text(f"📊 المشتركين الكلي: {len(users_sheet.col_values(1))}", reply_markup=admin_kb())
+        all_ids = users_sheet.col_values(1)
+        
+        if query.data == 'adm_stats':
+            total = len(all_ids)
+            last_id = all_ids[-1] if total > 0 else "N/A"
+            msg = (f"📊 **إحصائيات البوت الحالية:**\n\n"
+                   f"👥 إجمالي الأعضاء: `{total}`\n"
+                   f"🟢 الأعضاء النشطين: `{total}`\n"
+                   f"🆔 آخر ID انضم: `{last_id}`\n"
+                   f"📡 حالة السيرفر: `Live` ✅")
+            await query.edit_message_text(msg, reply_markup=admin_kb(), parse_mode=ParseMode.HTML)
+        
+        elif query.data == 'adm_list':
+            list_msg = "📋 **آخر 15 معرف (ID) مسجل:**\n\n" + "\n".join([f"`{i}`" for i in all_ids[-15:]])
+            await query.edit_message_text(list_msg, reply_markup=admin_kb(), parse_mode=ParseMode.HTML)
+
+        elif query.data == 'adm_check':
+            await query.edit_message_text("🔍 أرسل الـ ID المراد فحصه:")
+            context.user_data['step'] = 'check'
+
         elif query.data == 'adm_bc':
-            await query.edit_message_text("📝 أرسل الإذاعة الآن:")
+            await query.edit_message_text("📝 أرسل رسالة الإذاعة:")
             context.user_data['step'] = 'bc'
+
         elif query.data == 'adm_ban':
-            await query.edit_message_text("🆔 أرسل الـ ID للحظر:")
+            await query.edit_message_text("🚫 أرسل الـ ID للحظر:")
             context.user_data['step'] = 'ban'
+
         elif query.data == 'adm_unban':
             await query.edit_message_text("🔓 أرسل الـ ID لفك الحظر:")
             context.user_data['step'] = 'unban'
+
         elif query.data == 'adm_close': await query.delete_message()
     
     elif query.data.startswith('s'):
@@ -137,32 +142,37 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if is_banned(uid): return
-    
     step = context.user_data.get('step')
+
     if uid == ADMIN_ID and step:
+        target = update.message.text
         if step == 'bc':
             users = users_sheet.col_values(1)
             for u in users:
-                try: await context.bot.send_message(u, update.message.text)
+                try: await context.bot.send_message(u, target)
                 except: pass
-            await update.message.reply_text(f"✅ تمت الإذاعة لـ {len(users)} مستخدم.")
+            await update.message.reply_text(f"✅ تم الإرسال لـ {len(users)} مستخدم.")
+        elif step == 'check':
+            found = users_sheet.find(target)
+            banned = ban_sheet.find(target)
+            res = f"🔍 **تقرير العضو:** `{target}`\n\n"
+            res += "✅ موجود في القاعدة" if found else "❌ غير موجود"
+            res += "\n🚫 حالة الحظر: محظور" if banned else "\n🟢 حالة الحظر: غير محظور"
+            await update.message.reply_text(res, parse_mode=ParseMode.HTML)
         elif step == 'ban':
-            target = update.message.text
             if not ban_sheet.find(target): ban_sheet.append_row([target])
             await update.message.reply_text(f"🚫 تم حظر {target}")
         elif step == 'unban':
-            target = update.message.text
             try:
                 cell = ban_sheet.find(target)
                 ban_sheet.delete_rows(cell.row)
-                await update.message.reply_text(f"🔓 تم فك حظر {target}")
-            except: await update.message.reply_text("⚠️ المستخدم غير محظور.")
+                await update.message.reply_text(f"🔓 فك حظر {target}")
+            except: await update.message.reply_text("المستخدم ليس محظوراً.")
         context.user_data['step'] = None
         return
 
-    is_sub, channel = await check_sub(uid, context)
-    if not is_sub:
-        return await update.message.reply_text(f"⚠️ اشترك أولاً في {channel}")
+    is_sub, ch = await check_sub(uid, context)
+    if not is_sub: return await update.message.reply_text(f"⚠️ اشترك في {ch}")
 
     context.user_data['last_txt'] = update.message.text
     kb = [
